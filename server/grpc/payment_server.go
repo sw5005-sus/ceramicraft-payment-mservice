@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/common/paymentpb"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/log"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/model"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/service"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/common/paymentpb"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/log"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/model"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/service"
 )
 
 type PaymentService struct {

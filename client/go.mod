@@ -1,9 +1,10 @@
-module github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/client
+module github.com/sw5005-sus/ceramicraft-payment-mservice/client
 
-go 1.24.9
+go 1.25.7
+
 
 require (
-	github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/common v1.0.4
+	github.com/sw5005-sus/ceramicraft-payment-mservice/common v0.0.1
 	google.golang.org/grpc v1.75.1
 )
 

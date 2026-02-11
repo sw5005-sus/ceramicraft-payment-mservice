@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/log"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/model"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/log"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/model"
 	"gorm.io/gorm"
 )
 

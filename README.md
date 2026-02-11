@@ -1,6 +1,6 @@
 # 🚀 [ceramicraft-payment-mservice]: pay_account management system
 
-![Go Version](https://img.shields.io/badge/go-1.24.9-blue.svg)
+![Go Version](https://img.shields.io/badge/go-1.25.7-blue.svg)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -45,7 +45,7 @@ This service is part of the **cerami-craft** project, responsible for payment-re
 
 ### Prerequisites
 
-* Go `[1.24.9]`
+* Go `[1.25.7]`
 * docker compose
 
 ### Deployment with Docker Compose
@@ -54,7 +54,7 @@ The recommended way to run the entire system (services + infrastructure) is usin
 
 1.  **Clone the repository:**
     ```bash
-    git clone git@github.com:NUS-ISS-Agile-Team/ceramicraft-deploy.git
+    git clone git@github.com:sw5005-sus/ceramicraft-deploy.git
     cd ceramicraft-deploy
     ```
 
