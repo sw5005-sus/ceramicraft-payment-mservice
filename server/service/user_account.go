@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
-	bizerror "github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/common/biz_error"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/common/paymentpb"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/log"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/dao"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/model"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/utils"
+	bizerror "github.com/sw5005-sus/ceramicraft-payment-mservice/common/biz_error"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/common/paymentpb"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/log"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/dao"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/model"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/utils"
 	"gorm.io/gorm"
 )
 

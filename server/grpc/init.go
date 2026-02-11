@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/common/paymentpb"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/config"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/log"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/common/paymentpb"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/config"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/log"
 	"google.golang.org/grpc"
 )
 

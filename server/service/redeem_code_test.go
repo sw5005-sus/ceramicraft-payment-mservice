@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/config"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/http/data"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/log"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/dao/mocks"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/config"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/http/data"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/log"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/dao/mocks"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/model"
 )
 
 func initEnv() {

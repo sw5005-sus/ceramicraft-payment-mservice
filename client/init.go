@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/common/paymentpb"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/common/paymentpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

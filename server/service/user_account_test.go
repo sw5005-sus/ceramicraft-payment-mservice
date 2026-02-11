@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/dao/mocks"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/repository/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/dao/mocks"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

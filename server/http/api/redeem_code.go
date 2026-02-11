@@ -3,9 +3,9 @@ package api
 import (
 	"net/http"
 
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/http/data"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/log"
-	"github.com/NUS-ISS-Agile-Team/ceramicraft-payment-mservice/server/service"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/http/data"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/log"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/service"
 
 	"github.com/gin-gonic/gin"
 )
