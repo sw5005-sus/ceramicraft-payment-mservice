@@ -24,4 +24,5 @@ type UserAccountChangeLogQuery struct {
 	AccountId     *int
 	OpType        int
 	IdempotentKey *string
+	Limit         int
 }

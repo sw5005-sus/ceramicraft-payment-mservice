@@ -5,6 +5,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	ceramicraftsecure "github.com/sw5005-sus/ceramicraft-secure"
+
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/config"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/grpc"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/http"
@@ -24,6 +26,7 @@ func main() {
 	log.InitLogger()
 	repository.Init()
 	utils.InitJwtSecret()
+	ceramicraftsecure.Init()
 	mq.Init()
 	metrics.RegisterMetrics()
 	go grpc.Init(sigCh)

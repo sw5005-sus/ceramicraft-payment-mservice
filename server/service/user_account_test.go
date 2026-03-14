@@ -193,8 +193,9 @@ func TestPayOrder(t *testing.T) {
 
 		userAccount := &model.UserAccount{ID: 1, UserId: userId, Balance: 200}
 		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once() // No existing change log
 		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).Return(nil).Once()
-		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything).Return(1, nil).Once()
+		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything, mock.Anything).Return(1, nil).Once()
 
 		changeLog, err := service.PayOrder(ctx, userId, bizId, amount)
 		if err != nil {
@@ -249,7 +250,8 @@ func TestPayOrder(t *testing.T) {
 		userAccount := &model.UserAccount{ID: 1, UserId: userId, Balance: 200}
 		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
 		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).Return(nil).Once()
-		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything).Return(0, nil).Once() // Simulate failure
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()                                                       // No existing change log
+		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything, mock.Anything).Return(0, nil).Once() // Simulate failure
 
 		_, err := service.PayOrder(ctx, userId, bizId, amount)
 		if err == nil {
@@ -279,8 +281,9 @@ func TestUserAccountTopUp(t *testing.T) {
 
 		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Twice()
 		redeemCodeDao.On("GetByCode", ctx, redeemCode).Return(redeemCodeRecord, nil).Once()
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()
 		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).Return(nil).Once()
-		userAccountDao.On("AddBalanceInTransaction", ctx, userId, int(redeemCodeRecord.Amount), userAccount.Balance, mock.Anything).Return(nil).Once()
+		userAccountDao.On("AddBalanceInTransaction", ctx, userId, int(redeemCodeRecord.Amount), userAccount.Balance, mock.Anything, mock.Anything).Return(nil).Once()
 		redeemCodeDao.On("UseRedeemCodeInTransaction", ctx, mock.Anything, mock.Anything).Return(1, nil).Once()
 
 		account, code, err := service.UserAccountTopUp(ctx, userId, redeemCode)
