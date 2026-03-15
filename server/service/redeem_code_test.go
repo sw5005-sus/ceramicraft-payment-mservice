@@ -22,10 +22,10 @@ func initEnv() {
 		},
 	}
 	log.InitLogger()
-	model.GenHmacF1unc = func(data string) (string, error) {
+	model.GenHmacFunc = func(data string) (string, error) {
 		return "mocked-signature", nil
 	}
-	model.VerifyHmacSha256 = func(data, signature string) (bool, error) {
+	model.VerifyHmacSha256Func = func(data, signature string) (bool, error) {
 		return signature == "mocked-signature", nil
 	}
 }

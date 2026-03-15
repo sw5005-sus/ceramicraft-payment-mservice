@@ -95,9 +95,6 @@ func (u *UserAccountServiceImpl) GetUserAccountByUserID(ctx context.Context, use
 }
 
 func (u *UserAccountServiceImpl) checkSign(ctx context.Context, account *model.UserAccount) (bool, error) {
-	if account.IntegritySign == "" {
-		return true, nil
-	}
 	latestLog, err := u.userAccountChangeLogDao.QueryChangeLogs(ctx, &model.UserAccountChangeLogQuery{
 		AccountId: &account.ID,
 		Limit:     1,
@@ -109,7 +106,7 @@ func (u *UserAccountServiceImpl) checkSign(ctx context.Context, account *model.U
 	if len(latestLog) == 0 {
 		return account.IntegritySign == "", nil
 	}
-	return model.VerifyHmacSha256(account.GetToSignData(latestLog[0]), account.IntegritySign)
+	return model.VerifyHmacSha256Func(account.GetToSignData(latestLog[0]), account.IntegritySign)
 }
 
 // PayOrder implements UserAccountService.
@@ -144,21 +141,24 @@ func (u *UserAccountServiceImpl) PayOrder(ctx context.Context, userId int, bizId
 		CreatedAt:     time.Now(),
 	}
 	err = u.txBeginner.Transaction(func(tx *gorm.DB) error {
+		oldBalance := account.Balance
+		defer func() {
+			account.Balance = oldBalance
+		}()
 		err = u.userAccountChangeLogDao.CreateChangeLogInTransaction(ctx, changeLog, tx)
 		if err != nil {
 			log.Logger.Errorf("Failed to create user account change log for user ID %d: %v", userId, err)
 			return err
 		}
 		// Update balance to sign
-		account.Balance -= amount
+		newBalance := oldBalance - amount
+		account.Balance = newBalance
 		err = account.Sign(changeLog)
 		if err != nil {
 			log.Logger.Errorf("Failed to sign user account for user ID %d: %v", userId, err)
 			return err
 		}
-		// recover oldBalance after signning
-		account.Balance += amount
-		rowsAffected, err := u.userAccountDao.SubtractBalanceInTransaction(ctx, userId, amount, account.Balance, account.IntegritySign, tx)
+		rowsAffected, err := u.userAccountDao.SubtractBalanceInTransaction(ctx, userId, amount, oldBalance, account.IntegritySign, tx)
 		if err != nil {
 			log.Logger.Errorf("Failed to subtract balance for user ID %d: %v", userId, err)
 			return err
@@ -209,6 +209,10 @@ func (u *UserAccountServiceImpl) UserAccountTopUp(ctx context.Context, userId in
 		CreatedAt:     time.Now(),
 	}
 	err = u.txBeginner.Transaction(func(tx *gorm.DB) error {
+		oldAccountBalance := account.Balance
+		defer func() {
+			account.Balance = oldAccountBalance
+		}()
 		redeemCodeRecord.UsedUserId = userId
 		ret, err := u.redeemCodeDao.UseRedeemCodeInTransaction(ctx, redeemCodeRecord, tx)
 		if err != nil {
@@ -227,15 +231,14 @@ func (u *UserAccountServiceImpl) UserAccountTopUp(ctx context.Context, userId in
 		}
 		log.Logger.Infof("User account change log created for user ID %d, amount %d, redeem code %s", userId, redeemCodeRecord.Amount, redeemCode)
 		// Update balance to sign
-		account.Balance += redeemCodeRecord.Amount
+		newAccountBalance := account.Balance + redeemCodeRecord.Amount
+		account.Balance = newAccountBalance
 		err = account.Sign(changeLog)
 		if err != nil {
 			log.Logger.Errorf("Failed to sign user account for user ID %d: %v", userId, err)
 			return err
 		}
-		// recover oldBalance after signning
-		account.Balance -= redeemCodeRecord.Amount
-		err = u.userAccountDao.AddBalanceInTransaction(ctx, userId, int(redeemCodeRecord.Amount), account.Balance, account.IntegritySign, tx)
+		err = u.userAccountDao.AddBalanceInTransaction(ctx, userId, int(redeemCodeRecord.Amount), oldAccountBalance, account.IntegritySign, tx)
 		if err != nil {
 			log.Logger.Errorf("Failed to add balance for user ID %d: %v", userId, err)
 			return err

@@ -60,6 +60,9 @@ func (u *UserAccountChangeLogDAOImpl) QueryChangeLogs(ctx context.Context, query
 	if query.IdempotentKey != nil {
 		dbQuery = dbQuery.Where("idempotent_key = ?", *query.IdempotentKey)
 	}
+	if query.OpType != 0 {
+		dbQuery = dbQuery.Where("op_type = ?", query.OpType)
+	}
 	ret := dbQuery.Order("id desc").Limit(query.Limit).Find(&changeLogs)
 	if ret.Error != nil {
 		log.Logger.Errorf("Failed to query user account change logs: %v", ret.Error)
