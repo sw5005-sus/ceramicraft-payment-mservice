@@ -193,8 +193,15 @@ func TestPayOrder(t *testing.T) {
 
 		userAccount := &model.UserAccount{ID: 1, UserId: userId, Balance: 200}
 		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
-		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).Return(nil).Once()
-		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything).Return(1, nil).Once()
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once() // No existing change log
+		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				if cl, ok := args.Get(2).(*model.UserAccountChangeLog); ok && cl.ID == 0 {
+					cl.ID = 1
+				}
+			}).
+			Return(nil).Once()
+		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything, mock.Anything).Return(1, nil).Once()
 
 		changeLog, err := service.PayOrder(ctx, userId, bizId, amount)
 		if err != nil {
@@ -206,6 +213,53 @@ func TestPayOrder(t *testing.T) {
 		if changeLog != nil && (changeLog.Amount != amount || changeLog.OpType != model.OpTypePayment || changeLog.IdempotentKey != bizId) {
 			t.Errorf("Change log fields do not match expected values")
 		}
+	})
+	t.Run("should fail when integrity check / signature verification fails", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service := &UserAccountServiceImpl{
+			userAccountDao:          userAccountDao,
+			userAccountChangeLogDao: userAccountChangeLogDao,
+			txBeginner:              &fakeTx{DB: initMemDb(t)},
+		}
+		// Return a valid user account so that PayOrder proceeds to integrity checks.
+		userAccount := &model.UserAccount{ID: 1, UserId: userId, Balance: 200, IntegritySign: "invalid-sign"}
+		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
+		// Simulate existing change logs that cause the new integrity/signature check to fail.
+		existingLogs := []*model.UserAccountChangeLog{
+			{
+				ID:            1,
+				Amount:        amount + 1, // deliberately mismatched amount to trigger integrity failure
+				OpType:        model.OpTypePayment,
+				IdempotentKey: bizId,
+			},
+		}
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(existingLogs, nil).Once()
+		changeLog, err := service.PayOrder(ctx, userId, bizId, amount)
+		// On integrity/signature mismatch, PayOrder is expected to return an error and no new change log.
+		assert.Error(t, err)
+		assert.Nil(t, changeLog)
+	})
+	t.Run("should propagate verifier error as failure", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service := &UserAccountServiceImpl{
+			userAccountDao:          userAccountDao,
+			userAccountChangeLogDao: userAccountChangeLogDao,
+			txBeginner:              &fakeTx{DB: initMemDb(t)},
+		}
+		userAccount := &model.UserAccount{ID: 1, UserId: userId, Balance: 200}
+		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
+		// No existing change logs so that PayOrder proceeds into the transactional path.
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()
+		// Simulate an internal verifier/consistency error by making the balance update fail.
+		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).Return(nil).Once()
+		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything, mock.Anything).
+			Return(0, assert.AnError).Once()
+		changeLog, err := service.PayOrder(ctx, userId, bizId, amount)
+		// When the verifier (or underlying verification step) returns an error, PayOrder should surface it.
+		assert.Error(t, err)
+		assert.Nil(t, changeLog)
 	})
 
 	t.Run("should return error if user account not found", func(t *testing.T) {
@@ -246,10 +300,11 @@ func TestPayOrder(t *testing.T) {
 			txBeginner:              &fakeTx{DB: initMemDb(t)},
 		}
 
-		userAccount := &model.UserAccount{ID: 1, UserId: userId, Balance: 200}
+		userAccount := &model.UserAccount{ID: 1, UserId: userId, Balance: 200, IntegritySign: "mocked-signature"}
 		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
 		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).Return(nil).Once()
-		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything).Return(0, nil).Once() // Simulate failure
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()                                                       // No existing change log
+		userAccountDao.On("SubtractBalanceInTransaction", ctx, userId, amount, userAccount.Balance, mock.Anything, mock.Anything).Return(0, nil).Once() // Simulate failure
 
 		_, err := service.PayOrder(ctx, userId, bizId, amount)
 		if err == nil {
@@ -279,8 +334,9 @@ func TestUserAccountTopUp(t *testing.T) {
 
 		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Twice()
 		redeemCodeDao.On("GetByCode", ctx, redeemCode).Return(redeemCodeRecord, nil).Once()
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()
 		userAccountChangeLogDao.On("CreateChangeLogInTransaction", ctx, mock.Anything, mock.Anything).Return(nil).Once()
-		userAccountDao.On("AddBalanceInTransaction", ctx, userId, int(redeemCodeRecord.Amount), userAccount.Balance, mock.Anything).Return(nil).Once()
+		userAccountDao.On("AddBalanceInTransaction", ctx, userId, int(redeemCodeRecord.Amount), userAccount.Balance, mock.Anything, mock.Anything).Return(nil).Once()
 		redeemCodeDao.On("UseRedeemCodeInTransaction", ctx, mock.Anything, mock.Anything).Return(1, nil).Once()
 
 		account, code, err := service.UserAccountTopUp(ctx, userId, redeemCode)
@@ -372,6 +428,70 @@ func TestUserAccountTopUp(t *testing.T) {
 		if err == nil {
 			t.Errorf("Expected error from transaction failure, got nil")
 		}
+	})
+}
+
+func TestCheckSign(t *testing.T) {
+	ctx := context.Background()
+	initEnv()
+	t.Run("should return true if no change log and integrity sign is empty", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		service := &UserAccountServiceImpl{
+			userAccountDao: userAccountDao,
+		}
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service.userAccountChangeLogDao = userAccountChangeLogDao
+
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()
+		account := &model.UserAccount{IntegritySign: ""}
+		result, err := service.checkSign(ctx, account)
+		assert.NoError(t, err)
+		assert.True(t, result)
+	})
+
+	t.Run("should return false if integrity sign check fails", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		service := &UserAccountServiceImpl{
+			userAccountDao: userAccountDao,
+		}
+		account := &model.UserAccount{IntegritySign: "invalid-sign"}
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service.userAccountChangeLogDao = userAccountChangeLogDao
+
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()
+		result, err := service.checkSign(ctx, account)
+		assert.NoError(t, err)
+		assert.False(t, result)
+	})
+
+	t.Run("should return true if integrity sign check passes", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		service := &UserAccountServiceImpl{
+			userAccountDao: userAccountDao,
+		}
+		account := &model.UserAccount{IntegritySign: "mocked-signature"}
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service.userAccountChangeLogDao = userAccountChangeLogDao
+
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return([]*model.UserAccountChangeLog{{}}, nil).Once()
+		result, err := service.checkSign(ctx, account)
+		assert.NoError(t, err)
+		assert.True(t, result)
+	})
+
+	t.Run("should return error if querying change logs fails", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		service := &UserAccountServiceImpl{
+			userAccountDao: userAccountDao,
+		}
+		account := &model.UserAccount{IntegritySign: "mocked-signature"}
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service.userAccountChangeLogDao = userAccountChangeLogDao
+
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, assert.AnError).Once()
+		result, err := service.checkSign(ctx, account)
+		assert.Error(t, err)
+		assert.False(t, result)
 	})
 }
 

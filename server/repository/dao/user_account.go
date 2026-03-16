@@ -11,11 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockery --name=UserAccountDao --output=./mocks --filename=UserAccountDao.go --outpkg=mocks
 type UserAccountDao interface {
 	CreateUserAccount(ctx context.Context, userAccount *model.UserAccount) error
 	GetUserAccountByUserID(ctx context.Context, userID int) (*model.UserAccount, error)
-	AddBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, tx *gorm.DB) error
-	SubtractBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, tx *gorm.DB) (int, error)
+	AddBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, sign string, tx *gorm.DB) error
+	SubtractBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, sign string, tx *gorm.DB) (int, error)
 }
 
 var (
@@ -66,10 +67,13 @@ func (u *UserAccountDaoImpl) GetUserAccountByUserID(ctx context.Context, userID 
 }
 
 // AddBalance implements UserAccountDao.
-func (u *UserAccountDaoImpl) AddBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, tx *gorm.DB) error {
+func (u *UserAccountDaoImpl) AddBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, sign string, tx *gorm.DB) error {
 	ret := tx.WithContext(ctx).Model(&model.UserAccount{}).
 		Where("user_id = ? and balance=?", userID, oldAmount).
-		Update("balance", gorm.Expr("balance + ?", amount))
+		Updates(map[string]interface{}{
+			"balance":        gorm.Expr("balance + ?", amount),
+			"integrity_sign": sign,
+		})
 	if ret.Error != nil {
 		log.Logger.Errorf("Failed to add balance for user ID %d: %v", userID, ret.Error)
 		return ret.Error
@@ -83,10 +87,13 @@ func (u *UserAccountDaoImpl) AddBalanceInTransaction(ctx context.Context, userID
 }
 
 // SubtractBalance implements UserAccountDao.
-func (u *UserAccountDaoImpl) SubtractBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, tx *gorm.DB) (int, error) {
+func (u *UserAccountDaoImpl) SubtractBalanceInTransaction(ctx context.Context, userID int, amount int, oldAmount int, sign string, tx *gorm.DB) (int, error) {
 	ret := tx.WithContext(ctx).Model(&model.UserAccount{}).
 		Where("user_id = ? and balance=?", userID, oldAmount).
-		Update("balance", gorm.Expr("balance - ?", amount))
+		Updates(map[string]interface{}{
+			"balance":        gorm.Expr("balance - ?", amount),
+			"integrity_sign": sign,
+		})
 	if ret.Error != nil {
 		log.Logger.Errorf("Failed to subtract balance for user ID %d: %v", userID, ret.Error)
 		return 0, ret.Error

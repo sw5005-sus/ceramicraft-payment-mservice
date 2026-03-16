@@ -22,6 +22,12 @@ func initEnv() {
 		},
 	}
 	log.InitLogger()
+	model.GenHmacFunc = func(data string) (string, error) {
+		return "mocked-signature", nil
+	}
+	model.VerifyHmacSha256Func = func(data, signature string) (bool, error) {
+		return signature == "mocked-signature", nil
+	}
 }
 
 func TestGetRedeemCodeService(t *testing.T) {
