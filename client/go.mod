@@ -1,6 +1,6 @@
 module github.com/sw5005-sus/ceramicraft-payment-mservice/client
 
-go 1.25.7
+go 1.25.8
 
 
 require (
