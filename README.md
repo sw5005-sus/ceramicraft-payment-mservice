@@ -1,6 +1,6 @@
 # 🚀 [ceramicraft-payment-mservice]: pay_account management system
 
-![Go Version](https://img.shields.io/badge/go-1.25.7-blue.svg)
+![Go Version](https://img.shields.io/badge/go-1.28-blue.svg)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -45,7 +45,7 @@ This service is part of the **cerami-craft** project, responsible for payment-re
 
 ### Prerequisites
 
-* Go `[1.25.7]`
+* Go `[1.25.8]`
 * docker compose
 
 ### Deployment with Docker Compose

@@ -37,8 +37,8 @@ func NewRouter() *gin.Engine {
 	v1Authed := basicGroup.Group("")
 	{
 		v1Authed.Use(middleware.AuthMiddleware())
-		v1Authed.GET("/merchant/redeem-codes", api.QueryRedeemCodes)
-		v1Authed.POST("/merchant/redeem-codes/generate", api.GenerateRedeemCodes)
+		v1Authed.GET("/merchant/redeem-codes", middleware.RequireRoles("merchant_admin"), api.QueryRedeemCodes)
+		v1Authed.POST("/merchant/redeem-codes/generate", middleware.RequireRoles("merchant_admin"), api.GenerateRedeemCodes)
 		v1Authed.POST("/customer/pay-accounts/self/top-ups", api.TopUpUserPayAccount)
 		v1Authed.GET("/customer/pay-accounts/self", api.GetUserPayAccountInfo)
 	}
