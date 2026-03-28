@@ -11,11 +11,12 @@ var (
 )
 
 type Conf struct {
-	GrpcConfig  *GrpcConfig          `mapstructure:"grpc"`
-	LogConfig   *LogConfig           `mapstructure:"log"`
-	HttpConfig  *HttpConfig          `mapstructure:"http"`
-	MySQLConfig *MySQL               `mapstructure:"mysql"`
-	KafkaConfig *KafkaConsumerConfig `mapstructure:"kafka"`
+	GrpcConfig      *GrpcConfig          `mapstructure:"grpc"`
+	LogConfig       *LogConfig           `mapstructure:"log"`
+	HttpConfig      *HttpConfig          `mapstructure:"http"`
+	MySQLConfig     *MySQL               `mapstructure:"mysql"`
+	KafkaConfig     *KafkaConsumerConfig `mapstructure:"kafka"`
+	AuditGrpcConfig *GrpcConfig          `mapstructure:"audit_grpc"`
 }
 
 type KafkaConsumerConfig struct {

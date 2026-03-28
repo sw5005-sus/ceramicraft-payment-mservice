@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	auditclient "github.com/sw5005-sus/ceramicraft-audit-client"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/config"
 	_ "github.com/sw5005-sus/ceramicraft-payment-mservice/server/docs"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/http/api"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/metrics"
@@ -18,7 +20,10 @@ const (
 
 func NewRouter() *gin.Engine {
 	r := gin.Default()
-
+	audie_middleware := auditclient.AuditMiddleware(
+		"comment-ms",
+		config.Config.AuditGrpcConfig.Host,
+		config.Config.AuditGrpcConfig.Port)
 	basicGroup := r.Group(serviceURIPrefix)
 	{
 		basicGroup.Use(metrics.MetricsMiddleware())
@@ -37,8 +42,8 @@ func NewRouter() *gin.Engine {
 	v1Authed := basicGroup.Group("")
 	{
 		v1Authed.Use(middleware.AuthMiddleware())
-		v1Authed.GET("/merchant/redeem-codes", middleware.RequireRoles("merchant_admin"), api.QueryRedeemCodes)
-		v1Authed.POST("/merchant/redeem-codes/generate", middleware.RequireRoles("merchant_admin"), api.GenerateRedeemCodes)
+		v1Authed.GET("/merchant/redeem-codes", middleware.RequireRoles("merchant_admin"), audie_middleware, api.QueryRedeemCodes)
+		v1Authed.POST("/merchant/redeem-codes/generate", middleware.RequireRoles("merchant_admin"), audie_middleware, api.GenerateRedeemCodes)
 		v1Authed.POST("/customer/pay-accounts/self/top-ups", api.TopUpUserPayAccount)
 		v1Authed.GET("/customer/pay-accounts/self", api.GetUserPayAccountInfo)
 	}
