@@ -15,11 +15,11 @@ type PaymentService struct {
 }
 
 func (s *PaymentService) PayOrder(ctx context.Context, req *paymentpb.PayOrderRequest) (*paymentpb.PayOrderResponse, error) {
-	log.Logger.Infof("[grpc-svr] method=PayOrder, req=%v", req)
+	log.WithContext(ctx).Infof("[grpc-svr] method=PayOrder, req=%v", req)
 	resp := &paymentpb.PayOrderResponse{}
 	errmsg := ""
 	if req.UserId == 0 || req.Amount <= 0 || req.BizId == "" {
-		log.Logger.Warnf("Invalid request: %v", req)
+		log.WithContext(ctx).Warnf("Invalid request: %v", req)
 		resp.Code = int32(paymentpb.RespCode_BAD_REQUEST)
 		errmsg = "UserId, Amount and BizId must be provided and valid"
 		resp.ErrorMsg = &errmsg
@@ -32,7 +32,7 @@ func (s *PaymentService) PayOrder(ctx context.Context, req *paymentpb.PayOrderRe
 		resp.ErrorMsg = &errmsg
 		return resp, nil
 	}
-	log.Logger.Infof("Payment successful, change log: %+v", changeLog)
+	log.WithContext(ctx).Infof("Payment successful, change log: %+v", changeLog)
 	resp.Code = int32(paymentpb.RespCode_SUCCESS)
 	resp.PayOrderInfo = &paymentpb.PayOrderInfo{
 		PayOrderId:  genPayOrderId(changeLog),
@@ -44,11 +44,11 @@ func (s *PaymentService) PayOrder(ctx context.Context, req *paymentpb.PayOrderRe
 }
 
 func (s *PaymentService) QueryPayOrder(ctx context.Context, req *paymentpb.PayOrderQueryRequest) (*paymentpb.PayOrderQueryResponse, error) {
-	log.Logger.Infof("[grpc-svr] method=QueryPayOrder, req=%v", req)
+	log.WithContext(ctx).Infof("[grpc-svr] method=QueryPayOrder, req=%v", req)
 	resp := &paymentpb.PayOrderQueryResponse{}
 	errmsg := ""
 	if req.UserId == 0 && req.BizId == nil {
-		log.Logger.Warnf("Either UserId or BizId must be provided")
+		log.WithContext(ctx).Warnf("Either UserId or BizId must be provided")
 		resp.Code = int32(paymentpb.RespCode_BAD_REQUEST)
 		errmsg = "Either UserId or BizId must be provided"
 		resp.ErrorMsg = &errmsg

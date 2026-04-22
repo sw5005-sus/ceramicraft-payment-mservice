@@ -47,11 +47,11 @@ func (r *RedeemCodeServiceImpl) GenerateRedeemCodes(ctx context.Context, amount 
 		for {
 			code = utils.GenRedeemCode(redeemCodeSize)
 			if _, exists := codeSet[code]; !exists {
-				log.Logger.Infof("Generated redeem code: %s", code)
+				log.WithContext(ctx).Infof("Generated redeem code: %s", code)
 				codeSet[code] = struct{}{}
 				break
 			}
-			log.Logger.Warnf("Duplicate redeem code generated: %s, regenerating...", code)
+			log.WithContext(ctx).Warnf("Duplicate redeem code generated: %s, regenerating...", code)
 		}
 		toInsert[i] = &model.RedeemCode{
 			Code:      code,
@@ -62,10 +62,10 @@ func (r *RedeemCodeServiceImpl) GenerateRedeemCodes(ctx context.Context, amount 
 	}
 	err := r.redeemCodeDao.BatchInsert(ctx, toInsert)
 	if err != nil {
-		log.Logger.Errorf("Failed to generate redeem codes: %v", err)
+		log.WithContext(ctx).Errorf("Failed to generate redeem codes: %v", err)
 		return err
 	}
-	log.Logger.Infof("Successfully generated %d redeem codes with amount %d each", quantity, amount)
+	log.WithContext(ctx).Infof("Successfully generated %d redeem codes with amount %d each", quantity, amount)
 	return nil
 }
 
@@ -78,7 +78,7 @@ func (r *RedeemCodeServiceImpl) QueryRedeemCodes(ctx context.Context, query *dat
 	}
 	redeemCodes, err := r.redeemCodeDao.QueryRedeemCodes(ctx, dbQuery)
 	if err != nil {
-		log.Logger.Errorf("Failed to query redeem codes: %v", err)
+		log.WithContext(ctx).Errorf("Failed to query redeem codes: %v", err)
 		return nil, err
 	}
 	result := make([]*data.RedeemCodeVO, len(redeemCodes))

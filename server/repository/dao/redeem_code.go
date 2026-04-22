@@ -38,10 +38,10 @@ func GetRedeemCodeDao() RedeemCodeDao {
 func (dao *RedeemCodeDaoImpl) BatchInsert(ctx context.Context, redeemCodes []*model.RedeemCode) error {
 	ret := dao.db.WithContext(ctx).Create(&redeemCodes)
 	if ret.Error != nil {
-		log.Logger.Errorf("Failed to batch insert redeem codes: %v", ret.Error)
+		log.WithContext(ctx).Errorf("Failed to batch insert redeem codes: %v", ret.Error)
 		return ret.Error
 	}
-	log.Logger.Infof("Successfully batch inserted %d redeem codes", ret.RowsAffected)
+	log.WithContext(ctx).Infof("Successfully batch inserted %d redeem codes", ret.RowsAffected)
 	return nil
 }
 
@@ -49,7 +49,7 @@ func (dao *RedeemCodeDaoImpl) GetByCode(ctx context.Context, code string) (*mode
 	var redeemCode model.RedeemCode
 	ret := dao.db.WithContext(ctx).Where("code = ?", code).First(&redeemCode)
 	if ret.Error != nil {
-		log.Logger.Errorf("Failed to get redeem code by code %s: %v", code, ret.Error)
+		log.WithContext(ctx).Errorf("Failed to get redeem code by code %s: %v", code, ret.Error)
 		return nil, ret.Error
 	}
 	return &redeemCode, nil
@@ -73,7 +73,7 @@ func (dao *RedeemCodeDaoImpl) QueryRedeemCodes(ctx context.Context, query *model
 	}
 	ret := dbQquery.Find(&redeemCodes)
 	if ret.Error != nil {
-		log.Logger.Errorf("Failed to query redeem codes: %v", ret.Error)
+		log.WithContext(ctx).Errorf("Failed to query redeem codes: %v", ret.Error)
 		return nil, ret.Error
 	}
 	return redeemCodes, nil
@@ -82,9 +82,9 @@ func (dao *RedeemCodeDaoImpl) QueryRedeemCodes(ctx context.Context, query *model
 func (dao *RedeemCodeDaoImpl) UseRedeemCodeInTransaction(ctx context.Context, redeemCode *model.RedeemCode, tx *gorm.DB) (int, error) {
 	ret := tx.WithContext(ctx).Model(redeemCode).Where("used_user_id=0").Save(redeemCode)
 	if ret.Error != nil {
-		log.Logger.Errorf("Failed to update redeem code %s: %v", redeemCode.Code, ret.Error)
+		log.WithContext(ctx).Errorf("Failed to update redeem code %s: %v", redeemCode.Code, ret.Error)
 		return 0, ret.Error
 	}
-	log.Logger.Infof("Successfully updated redeem code %s", redeemCode.Code)
+	log.WithContext(ctx).Infof("Successfully updated redeem code %s", redeemCode.Code)
 	return int(ret.RowsAffected), nil
 }

@@ -42,10 +42,10 @@ func (u *UserAccountDaoImpl) CreateUserAccount(ctx context.Context, userAccount 
 	ret := u.db.WithContext(ctx).Create(userAccount)
 	if ret.Error != nil {
 		if errors.Is(ret.Error, gorm.ErrDuplicatedKey) {
-			log.Logger.Warnf("User account already exists for user ID %d", userAccount.UserId)
+			log.WithContext(ctx).Warnf("User account already exists for user ID %d", userAccount.UserId)
 			return nil
 		}
-		log.Logger.Errorf("Failed to create user account for user ID %d: %v", userAccount.UserId, ret.Error)
+		log.WithContext(ctx).Errorf("Failed to create user account for user ID %d: %v", userAccount.UserId, ret.Error)
 		return ret.Error
 	}
 	return ret.Error
@@ -57,10 +57,10 @@ func (u *UserAccountDaoImpl) GetUserAccountByUserID(ctx context.Context, userID 
 	ret := u.db.WithContext(ctx).Where("user_id = ?", userID).First(&userAccount)
 	if ret.Error != nil {
 		if errors.Is(ret.Error, gorm.ErrRecordNotFound) {
-			log.Logger.Warnf("User account not found for user ID %d", userID)
+			log.WithContext(ctx).Warnf("User account not found for user ID %d", userID)
 			return nil, nil
 		}
-		log.Logger.Errorf("Failed to get user account by user ID %d: %v", userID, ret.Error)
+		log.WithContext(ctx).Errorf("Failed to get user account by user ID %d: %v", userID, ret.Error)
 		return nil, ret.Error
 	}
 	return &userAccount, nil
@@ -75,14 +75,14 @@ func (u *UserAccountDaoImpl) AddBalanceInTransaction(ctx context.Context, userID
 			"integrity_sign": sign,
 		})
 	if ret.Error != nil {
-		log.Logger.Errorf("Failed to add balance for user ID %d: %v", userID, ret.Error)
+		log.WithContext(ctx).Errorf("Failed to add balance for user ID %d: %v", userID, ret.Error)
 		return ret.Error
 	}
 	if ret.RowsAffected == 0 {
-		log.Logger.Warnf("No user account found to add balance for user ID %d", userID)
+		log.WithContext(ctx).Warnf("No user account found to add balance for user ID %d", userID)
 		return gorm.ErrCheckConstraintViolated
 	}
-	log.Logger.Infof("Successfully added %d to user ID %d", amount, userID)
+	log.WithContext(ctx).Infof("Successfully added %d to user ID %d", amount, userID)
 	return nil
 }
 
@@ -95,13 +95,13 @@ func (u *UserAccountDaoImpl) SubtractBalanceInTransaction(ctx context.Context, u
 			"integrity_sign": sign,
 		})
 	if ret.Error != nil {
-		log.Logger.Errorf("Failed to subtract balance for user ID %d: %v", userID, ret.Error)
+		log.WithContext(ctx).Errorf("Failed to subtract balance for user ID %d: %v", userID, ret.Error)
 		return 0, ret.Error
 	}
 	if ret.RowsAffected == 0 {
-		log.Logger.Warnf("No user account found to subtract balance for user ID %d", userID)
+		log.WithContext(ctx).Warnf("No user account found to subtract balance for user ID %d", userID)
 		return 0, gorm.ErrCheckConstraintViolated
 	}
-	log.Logger.Infof("Successfully subtracted %d from user ID %d", amount, userID)
+	log.WithContext(ctx).Infof("Successfully subtracted %d from user ID %d", amount, userID)
 	return int(ret.RowsAffected), nil
 }

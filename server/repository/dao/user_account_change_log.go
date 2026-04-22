@@ -39,9 +39,9 @@ func (u *UserAccountChangeLogDAOImpl) CreateChangeLogInTransaction(ctx context.C
 	ret := tx.WithContext(ctx).Create(changeLog)
 	if ret.Error != nil {
 		if errors.Is(ret.Error, gorm.ErrDuplicatedKey) {
-			log.Logger.Warnf("User account change log already exists for user ID %d, biz ID %s", changeLog.AccountId, changeLog.IdempotentKey)
+			log.WithContext(ctx).Warnf("User account change log already exists for user ID %d, biz ID %s", changeLog.AccountId, changeLog.IdempotentKey)
 		} else {
-			log.Logger.Errorf("Failed to create user account change log for user ID %d, biz ID %s: %v", changeLog.AccountId, changeLog.IdempotentKey, ret.Error)
+			log.WithContext(ctx).Errorf("Failed to create user account change log for user ID %d, biz ID %s: %v", changeLog.AccountId, changeLog.IdempotentKey, ret.Error)
 		}
 		return ret.Error
 	}
@@ -65,7 +65,7 @@ func (u *UserAccountChangeLogDAOImpl) QueryChangeLogs(ctx context.Context, query
 	}
 	ret := dbQuery.Order("id desc").Limit(query.Limit).Find(&changeLogs)
 	if ret.Error != nil {
-		log.Logger.Errorf("Failed to query user account change logs: %v", ret.Error)
+		log.WithContext(ctx).Errorf("Failed to query user account change logs: %v", ret.Error)
 		return nil, ret.Error
 	}
 	return changeLogs, nil

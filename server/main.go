@@ -14,6 +14,7 @@ import (
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/metrics"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/mq"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/telemetry"
 	"github.com/sw5005-sus/ceramicraft-user-mservice/common/utils"
 )
 
@@ -29,6 +30,10 @@ func main() {
 	ceramicraftsecure.Init()
 	mq.Init()
 	metrics.RegisterMetrics()
+	shutdownTrace := telemetry.InitTracer()
+	defer shutdownTrace()
+	shutdownMetrics := telemetry.InitMetrics()
+	defer shutdownMetrics()
 	go grpc.Init(sigCh)
 	go http.Init(sigCh)
 	// listen terminage signal

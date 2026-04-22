@@ -28,18 +28,18 @@ const (
 func GenerateRedeemCodes(c *gin.Context) {
 	var req data.RedeemCodeGenRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		log.Logger.Errorf("GenerateRedeemCodes bind error: %v", err)
+		log.WithContext(c.Request.Context()).Errorf("GenerateRedeemCodes bind error: %v", err)
 		c.JSON(http.StatusBadRequest, data.BaseResponse{ErrMsg: err.Error()})
 		return
 	}
 	if req.Amount <= 0 || req.Count <= 0 || req.Count > maxGenCodeSize {
-		log.Logger.Error("GenerateRedeemCodes error: invalid amount or count")
+		log.WithContext(c.Request.Context()).Error("GenerateRedeemCodes error: invalid amount or count")
 		c.JSON(http.StatusBadRequest, data.BaseResponse{ErrMsg: "Amount must be positive and count must be between 1 and 100"})
 		return
 	}
 	err := service.GetRedeemCodeService().GenerateRedeemCodes(c.Request.Context(), req.Amount, req.Count)
 	if err != nil {
-		log.Logger.Errorf("GenerateRedeemCodes service error: %v", err)
+		log.WithContext(c.Request.Context()).Errorf("GenerateRedeemCodes service error: %v", err)
 		c.JSON(http.StatusInternalServerError, data.BaseResponse{ErrMsg: err.Error()})
 		return
 	}
@@ -59,18 +59,18 @@ func GenerateRedeemCodes(c *gin.Context) {
 func QueryRedeemCodes(c *gin.Context) {
 	var query data.RedeemCodeQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
-		log.Logger.Errorf("QueryRedeemCodes bind error:", err)
+		log.WithContext(c.Request.Context()).Errorf("QueryRedeemCodes bind error:", err)
 		c.JSON(http.StatusBadRequest, data.BaseResponse{ErrMsg: err.Error()})
 		return
 	}
 	if query.Code == nil && query.Used == nil {
-		log.Logger.Error("QueryRedeemCodes error: at least one query parameter must be provided")
+		log.WithContext(c.Request.Context()).Error("QueryRedeemCodes error: at least one query parameter must be provided")
 		c.JSON(http.StatusBadRequest, data.BaseResponse{ErrMsg: "At least one query parameter must be provided"})
 		return
 	}
 	ret, err := service.GetRedeemCodeService().QueryRedeemCodes(c.Request.Context(), &query)
 	if err != nil {
-		log.Logger.Errorf("QueryRedeemCodes service error: $v", err)
+		log.WithContext(c.Request.Context()).Errorf("QueryRedeemCodes service error: $v", err)
 		c.JSON(http.StatusInternalServerError, data.BaseResponse{ErrMsg: err.Error()})
 		return
 	}
