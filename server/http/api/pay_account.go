@@ -66,7 +66,7 @@ func TopUpUserPayAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID not found in context"})
 		return
 	}
-	log.Logger.Infof("TopUpUserPayAccount called for user ID: %d", userId)
+	log.WithContext(c.Request.Context()).Infof("TopUpUserPayAccount called for user ID: %d", userId)
 	var req data.UserPayAccountTopUpRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, data.BaseResponse{ErrMsg: err.Error()})

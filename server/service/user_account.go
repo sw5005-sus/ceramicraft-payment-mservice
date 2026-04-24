@@ -53,16 +53,16 @@ const userAccountNoSize = 12
 // CreateUserAccount implements UserAccountService.
 func (u *UserAccountServiceImpl) CreateUserAccount(ctx context.Context, userId int) (*model.UserAccount, error) {
 	if userId <= 0 {
-		log.Logger.Errorf("Invalid user ID: %d", userId)
+		log.WithContext(ctx).Errorf("Invalid user ID: %d", userId)
 		return nil, fmt.Errorf("invalid user ID")
 	}
 	account, err := u.userAccountDao.GetUserAccountByUserID(ctx, userId)
 	if err != nil {
-		log.Logger.Errorf("Failed to get user account for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Failed to get user account for user ID %d: %v", userId, err)
 		return nil, err
 	}
 	if account != nil {
-		log.Logger.Warnf("User account already exists for user ID %d", userId)
+		log.WithContext(ctx).Warnf("User account already exists for user ID %d", userId)
 		return account, nil
 	}
 	account = &model.UserAccount{
@@ -73,10 +73,10 @@ func (u *UserAccountServiceImpl) CreateUserAccount(ctx context.Context, userId i
 	}
 	err = u.userAccountDao.CreateUserAccount(ctx, account)
 	if err != nil {
-		log.Logger.Errorf("Failed to create user account for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Failed to create user account for user ID %d: %v", userId, err)
 		return nil, err
 	}
-	log.Logger.Infof("Successfully created user account for user ID %d, accountNo: %s", userId, account.AccountNo)
+	log.WithContext(ctx).Infof("Successfully created user account for user ID %d, accountNo: %s", userId, account.AccountNo)
 	return account, nil
 }
 
@@ -84,11 +84,11 @@ func (u *UserAccountServiceImpl) CreateUserAccount(ctx context.Context, userId i
 func (u *UserAccountServiceImpl) GetUserAccountByUserID(ctx context.Context, userId int) (*model.UserAccount, error) {
 	account, err := u.userAccountDao.GetUserAccountByUserID(ctx, userId)
 	if err != nil {
-		log.Logger.Errorf("Failed to get user account for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Failed to get user account for user ID %d: %v", userId, err)
 		return nil, err
 	}
 	if account == nil {
-		log.Logger.Warnf("User account not found for user ID %d", userId)
+		log.WithContext(ctx).Warnf("User account not found for user ID %d", userId)
 		return nil, nil
 	}
 	return account, nil
@@ -100,7 +100,7 @@ func (u *UserAccountServiceImpl) checkSign(ctx context.Context, account *model.U
 		Limit:     1,
 	})
 	if err != nil {
-		log.Logger.Errorf("Failed to query latest change log for user ID %d: %v", account.UserId, err)
+		log.WithContext(ctx).Errorf("Failed to query latest change log for user ID %d: %v", account.UserId, err)
 		return false, err
 	}
 	if len(latestLog) == 0 {
@@ -113,24 +113,24 @@ func (u *UserAccountServiceImpl) checkSign(ctx context.Context, account *model.U
 func (u *UserAccountServiceImpl) PayOrder(ctx context.Context, userId int, bizId string, amount int) (*model.UserAccountChangeLog, error) {
 	account, err := u.userAccountDao.GetUserAccountByUserID(ctx, userId)
 	if err != nil {
-		log.Logger.Errorf("Failed to get user account for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Failed to get user account for user ID %d: %v", userId, err)
 		return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_UNKNOWN_ERROR), Message: "failed to get user account", Err: err}
 	}
 	if account == nil {
-		log.Logger.Warnf("User account not found for user ID %d", userId)
+		log.WithContext(ctx).Warnf("User account not found for user ID %d", userId)
 		return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_ACCOUNT_NOT_EXIST), Message: "user account not found"}
 	}
 	if account.Balance < amount {
-		log.Logger.Warnf("Insufficient balance for user ID %d: balance %d, required %d", userId, account.Balance, amount)
+		log.WithContext(ctx).Warnf("Insufficient balance for user ID %d: balance %d, required %d", userId, account.Balance, amount)
 		return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_INSUFFICIENT_BALANCE), Message: "insufficient balance"}
 	}
 	checkRet, err := u.checkSign(ctx, account)
 	if err != nil {
-		log.Logger.Errorf("Failed to check integrity sign for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Failed to check integrity sign for user ID %d: %v", userId, err)
 		return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_UNKNOWN_ERROR), Message: "failed to check account integrity", Err: err}
 	}
 	if !checkRet {
-		log.Logger.Warnf("Integrity sign check failed for user ID %d", userId)
+		log.WithContext(ctx).Warnf("Integrity sign check failed for user ID %d", userId)
 		return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_BAD_REQUEST), Message: "account data may be tampered"}
 	}
 	changeLog := &model.UserAccountChangeLog{
@@ -147,7 +147,7 @@ func (u *UserAccountServiceImpl) PayOrder(ctx context.Context, userId int, bizId
 		}()
 		err = u.userAccountChangeLogDao.CreateChangeLogInTransaction(ctx, changeLog, tx)
 		if err != nil {
-			log.Logger.Errorf("Failed to create user account change log for user ID %d: %v", userId, err)
+			log.WithContext(ctx).Errorf("Failed to create user account change log for user ID %d: %v", userId, err)
 			return err
 		}
 		// Update balance to sign
@@ -155,25 +155,25 @@ func (u *UserAccountServiceImpl) PayOrder(ctx context.Context, userId int, bizId
 		account.Balance = newBalance
 		err = account.Sign(changeLog)
 		if err != nil {
-			log.Logger.Errorf("Failed to sign user account for user ID %d: %v", userId, err)
+			log.WithContext(ctx).Errorf("Failed to sign user account for user ID %d: %v", userId, err)
 			return err
 		}
 		rowsAffected, err := u.userAccountDao.SubtractBalanceInTransaction(ctx, userId, amount, oldBalance, account.IntegritySign, tx)
 		if err != nil {
-			log.Logger.Errorf("Failed to subtract balance for user ID %d: %v", userId, err)
+			log.WithContext(ctx).Errorf("Failed to subtract balance for user ID %d: %v", userId, err)
 			return err
 		}
 		if rowsAffected == 0 {
-			log.Logger.Errorf("No user account found to subtract balance for user ID %d", userId)
+			log.WithContext(ctx).Errorf("No user account found to subtract balance for user ID %d", userId)
 			return &bizerror.BizError{Code: int(paymentpb.RespCode_UNKNOWN_ERROR), Message: "failed to subtract balance"}
 		}
 		return nil
 	})
 	if err != nil {
-		log.Logger.Errorf("Transaction failed for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Transaction failed for user ID %d: %v", userId, err)
 		return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_UNKNOWN_ERROR), Message: "transaction failed", Err: err}
 	}
-	log.Logger.Infof("Successfully paid order for user ID %d, amount %d, biz ID %s", userId, amount, bizId)
+	log.WithContext(ctx).Infof("Successfully paid order for user ID %d, amount %d, biz ID %s", userId, amount, bizId)
 	return changeLog, nil
 }
 
@@ -181,24 +181,24 @@ func (u *UserAccountServiceImpl) PayOrder(ctx context.Context, userId int, bizId
 func (u *UserAccountServiceImpl) UserAccountTopUp(ctx context.Context, userId int, redeemCode string) (*model.UserAccount, *model.RedeemCode, error) {
 	account, err := u.userAccountDao.GetUserAccountByUserID(ctx, userId)
 	if err != nil {
-		log.Logger.Errorf("Failed to get user account for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Failed to get user account for user ID %d: %v", userId, err)
 		return nil, nil, err
 	}
 	if account == nil {
-		log.Logger.Warnf("User account not found for user ID %d", userId)
+		log.WithContext(ctx).Warnf("User account not found for user ID %d", userId)
 		return nil, nil, fmt.Errorf("user account not found")
 	}
 	redeemCodeRecord, err := u.redeemCodeDao.GetByCode(ctx, redeemCode)
 	if err != nil {
-		log.Logger.Errorf("Failed to get redeem code %s: %v", redeemCode, err)
+		log.WithContext(ctx).Errorf("Failed to get redeem code %s: %v", redeemCode, err)
 		return nil, nil, fmt.Errorf("failed to get redeem code")
 	}
 	if redeemCodeRecord == nil {
-		log.Logger.Warnf("Redeem code not found: %s", redeemCode)
+		log.WithContext(ctx).Warnf("Redeem code not found: %s", redeemCode)
 		return nil, nil, fmt.Errorf("invalid redeem code")
 	}
 	if redeemCodeRecord.UsedUserId != 0 {
-		log.Logger.Warnf("Redeem code already used: %s", redeemCode)
+		log.WithContext(ctx).Warnf("Redeem code already used: %s", redeemCode)
 		return nil, nil, fmt.Errorf("redeem code already used")
 	}
 	changeLog := &model.UserAccountChangeLog{
@@ -216,41 +216,41 @@ func (u *UserAccountServiceImpl) UserAccountTopUp(ctx context.Context, userId in
 		redeemCodeRecord.UsedUserId = userId
 		ret, err := u.redeemCodeDao.UseRedeemCodeInTransaction(ctx, redeemCodeRecord, tx)
 		if err != nil {
-			log.Logger.Errorf("Failed to mark redeem code %s as used: %v", redeemCode, err)
+			log.WithContext(ctx).Errorf("Failed to mark redeem code %s as used: %v", redeemCode, err)
 			return err
 		}
 		if ret == 0 {
-			log.Logger.Errorf("Redeem code %s was already used by another user", redeemCode)
+			log.WithContext(ctx).Errorf("Redeem code %s was already used by another user", redeemCode)
 			return fmt.Errorf("redeem code was already used")
 		}
-		log.Logger.Infof("Redeem code %s marked as used by user ID %d", redeemCode, userId)
+		log.WithContext(ctx).Infof("Redeem code %s marked as used by user ID %d", redeemCode, userId)
 		err = u.userAccountChangeLogDao.CreateChangeLogInTransaction(ctx, changeLog, tx)
 		if err != nil {
-			log.Logger.Errorf("Failed to create user account change log for user ID %d: %v", userId, err)
+			log.WithContext(ctx).Errorf("Failed to create user account change log for user ID %d: %v", userId, err)
 			return err
 		}
-		log.Logger.Infof("User account change log created for user ID %d, amount %d, redeem code %s", userId, redeemCodeRecord.Amount, redeemCode)
+		log.WithContext(ctx).Infof("User account change log created for user ID %d, amount %d, redeem code %s", userId, redeemCodeRecord.Amount, redeemCode)
 		// Update balance to sign
 		newAccountBalance := account.Balance + redeemCodeRecord.Amount
 		account.Balance = newAccountBalance
 		err = account.Sign(changeLog)
 		if err != nil {
-			log.Logger.Errorf("Failed to sign user account for user ID %d: %v", userId, err)
+			log.WithContext(ctx).Errorf("Failed to sign user account for user ID %d: %v", userId, err)
 			return err
 		}
 		err = u.userAccountDao.AddBalanceInTransaction(ctx, userId, int(redeemCodeRecord.Amount), oldAccountBalance, account.IntegritySign, tx)
 		if err != nil {
-			log.Logger.Errorf("Failed to add balance for user ID %d: %v", userId, err)
+			log.WithContext(ctx).Errorf("Failed to add balance for user ID %d: %v", userId, err)
 			return err
 		}
-		log.Logger.Infof("Balance added for user ID %d, amount %d", userId, redeemCodeRecord.Amount)
+		log.WithContext(ctx).Infof("Balance added for user ID %d, amount %d", userId, redeemCodeRecord.Amount)
 		return nil
 	})
 	if err != nil {
-		log.Logger.Errorf("Transaction failed for user ID %d: %v", userId, err)
+		log.WithContext(ctx).Errorf("Transaction failed for user ID %d: %v", userId, err)
 		return nil, nil, err
 	}
-	log.Logger.Infof("Successfully topped up user account for user ID %d, amount %d, redeem code %s", userId, redeemCodeRecord.Amount, redeemCode)
+	log.WithContext(ctx).Infof("Successfully topped up user account for user ID %d, amount %d, redeem code %s", userId, redeemCodeRecord.Amount, redeemCode)
 	userAccount, err := u.userAccountDao.GetUserAccountByUserID(ctx, userId)
 	return userAccount, redeemCodeRecord, err
 }
@@ -260,11 +260,11 @@ func (u *UserAccountServiceImpl) GetUserPayHistory(ctx context.Context, query *p
 	if query.UserId > 0 {
 		account, err := u.userAccountDao.GetUserAccountByUserID(ctx, int(query.UserId))
 		if err != nil {
-			log.Logger.Errorf("Failed to get user account for user ID %d: %v", query.UserId, err)
+			log.WithContext(ctx).Errorf("Failed to get user account for user ID %d: %v", query.UserId, err)
 			return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_UNKNOWN_ERROR), Message: "failed to get user account", Err: err}
 		}
 		if account == nil {
-			log.Logger.Warnf("User account not found for user ID %d", query.UserId)
+			log.WithContext(ctx).Warnf("User account not found for user ID %d", query.UserId)
 			return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_ACCOUNT_NOT_EXIST), Message: "user account not found"}
 		}
 		accountId = &account.ID
@@ -276,7 +276,7 @@ func (u *UserAccountServiceImpl) GetUserPayHistory(ctx context.Context, query *p
 			OpType:        model.OpTypePayment,
 		})
 	if err != nil {
-		log.Logger.Errorf("Failed to query user account change logs: %v", err)
+		log.WithContext(ctx).Errorf("Failed to query user account change logs: %v", err)
 		return nil, &bizerror.BizError{Code: int(paymentpb.RespCode_UNKNOWN_ERROR), Message: "failed to query change logs", Err: err}
 	}
 	return changeLogs, nil
