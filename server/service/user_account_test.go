@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/sw5005-sus/ceramicraft-payment-mservice/common/paymentpb"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/dao/mocks"
 	"github.com/sw5005-sus/ceramicraft-payment-mservice/server/repository/model"
 	"gorm.io/driver/sqlite"
@@ -492,6 +493,98 @@ func TestCheckSign(t *testing.T) {
 		result, err := service.checkSign(ctx, account)
 		assert.Error(t, err)
 		assert.False(t, result)
+	})
+}
+
+func TestGetUserPayHistory(t *testing.T) {
+	ctx := context.Background()
+	userId := 1
+	bizId := "test-biz-id"
+	initEnv()
+
+	t.Run("should return user pay history if found", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service := &UserAccountServiceImpl{
+			userAccountDao:          userAccountDao,
+			userAccountChangeLogDao: userAccountChangeLogDao,
+		}
+
+		userAccount := &model.UserAccount{ID: 1, UserId: userId}
+		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
+
+		changeLogs := []*model.UserAccountChangeLog{
+			{AccountId: userAccount.ID, OpType: model.OpTypePayment, IdempotentKey: bizId},
+		}
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(changeLogs, nil).Once()
+
+		result, err := service.GetUserPayHistory(ctx, &paymentpb.PayOrderQueryRequest{UserId: int32(userId), BizId: &bizId})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(result) != 1 {
+			t.Errorf("Expected 1 change log, got %d", len(result))
+		}
+		assert.Len(t, changeLogs, 1)
+		assert.Equal(t, bizId, changeLogs[0].IdempotentKey)
+		userAccountChangeLogDao.AssertExpectations(t)
+	})
+
+	t.Run("should return empty history if no logs found", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service := &UserAccountServiceImpl{
+			userAccountDao:          userAccountDao,
+			userAccountChangeLogDao: userAccountChangeLogDao,
+		}
+
+		userAccount := &model.UserAccount{ID: 1, UserId: userId}
+		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
+
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, nil).Once()
+
+		result, err := service.GetUserPayHistory(ctx, &paymentpb.PayOrderQueryRequest{UserId: int32(userId), BizId: &bizId})
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if len(result) != 0 {
+			t.Errorf("Expected 0 change logs, got %d", len(result))
+		}
+	})
+
+	t.Run("should return error if user account not found", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service := &UserAccountServiceImpl{
+			userAccountDao:          userAccountDao,
+			userAccountChangeLogDao: userAccountChangeLogDao,
+		}
+
+		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(nil, nil).Once()
+
+		_, err := service.GetUserPayHistory(ctx, &paymentpb.PayOrderQueryRequest{UserId: int32(userId), BizId: &bizId})
+		if err == nil {
+			t.Errorf("Expected error for non-existing user account, got nil")
+		}
+	})
+
+	t.Run("should return error if querying change logs fails", func(t *testing.T) {
+		userAccountDao := new(mocks.UserAccountDao)
+		userAccountChangeLogDao := new(mocks.UserAccountChangeLogDAO)
+		service := &UserAccountServiceImpl{
+			userAccountDao:          userAccountDao,
+			userAccountChangeLogDao: userAccountChangeLogDao,
+		}
+
+		userAccount := &model.UserAccount{ID: 1, UserId: userId}
+		userAccountDao.On("GetUserAccountByUserID", ctx, userId).Return(userAccount, nil).Once()
+
+		userAccountChangeLogDao.On("QueryChangeLogs", ctx, mock.Anything).Return(nil, assert.AnError).Once()
+
+		_, err := service.GetUserPayHistory(ctx, &paymentpb.PayOrderQueryRequest{UserId: int32(userId), BizId: &bizId})
+		if err == nil {
+			t.Errorf("Expected error from querying change logs, got nil")
+		}
 	})
 }
 
